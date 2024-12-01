@@ -1,3 +1,6 @@
+MODULE = $(shell go list -m)
+TY = $(shell date +%Y)
+
 # https://gist.github.com/prwhite/8168133
 help: ## Show this help
 	@ echo 'Usage: make <target>'
@@ -33,4 +36,20 @@ prompt: check-aoc-cookie ## get prompt, requires $AOC_SESSION_COOKIE, optional: 
 		go run scripts/cmd/prompt/main.go -day $(DAY) -cookie $(AOC_SESSION_COOKIE); \
 	else \
 		go run scripts/cmd/prompt/main.go -cookie $(AOC_SESSION_COOKIE); \
+	fi
+
+run-%: ## run day $*, optional: $YEAR
+	@ if [[ -n $$YEAR ]]; then \
+		go run $(YEAR)/day$*/main.go -part 1; \
+		go run $(YEAR)/day$*/main.go -part 2; \
+	else \
+		go run $(TY)/day$*/main.go -part 1; \
+		go run $(TY)/day$*/main.go -part 2; \
+	fi
+
+check-%: ## run day $*, optional: $YEAR
+	@ if [[ -n $$YEAR ]]; then \
+		go test $(MODULE)/$(YEAR)/day$*; \
+	else \
+		go test $(MODULE)/$(TY)/day$*; \
 	fi
