@@ -4,6 +4,8 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"log/slog"
+	"math"
 	"strings"
 
 	"github.com/Javinator9889/aoc-2024/cast"
@@ -40,18 +42,49 @@ func main() {
 
 func part1(input string) int {
 	parsed := parseInput(input)
-	_ = parsed
+	var safe int
+	for i := range parsed {
+		var safeRow bool
+	checker:
+		for j := range len(parsed[i]) - 2 {
+			check := parsed[i][j : j+3]
+			diff := check[2] - check[1]
+			prev := check[1] - check[0]
+			switch {
+			case
+				diff == 0,
+				prev == 0,
+				math.Abs(float64(diff)) > 3,
+				math.Abs(float64(prev)) > 3,
+				diff < 0 && prev > 0,
+				diff > 0 && prev < 0:
+				slog.Debug("Not safe", "row", parsed[i], "diff", diff, "prev", prev)
+				safeRow = false
+				break checker
+			default:
+				safeRow = true
+			}
+		}
+		if safeRow {
+			slog.Debug("Safe", "row", parsed[i])
+			safe++
+		}
+	}
 
-	return 0
+	return safe
 }
 
 func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans []int) {
-	for _, line := range strings.Split(input, "\n") {
-		ans = append(ans, cast.ToInt(line))
+func parseInput(input string) (ans [][]int) {
+	for i, line := range strings.Split(input, "\n") {
+		numbers := strings.Fields(line)
+		ans = append(ans, make([]int, len(numbers)))
+		for j, number := range numbers {
+			ans[i][j] = cast.ToInt(number)
+		}
 	}
 	return ans
 }
