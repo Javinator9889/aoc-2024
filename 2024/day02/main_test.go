@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"testing"
 )
 
@@ -46,14 +47,15 @@ func Test_part2(t *testing.T) {
 		{
 			name:  "example",
 			input: example,
-			want:  0,
+			want:  4,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "actual",
+			input: input,
+			want:  658,
+		},
 	}
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := part2(tt.input); got != tt.want {

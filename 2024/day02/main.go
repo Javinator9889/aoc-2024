@@ -40,34 +40,54 @@ func main() {
 	}
 }
 
+func Safe(diff int) bool {
+	return math.Abs(float64(diff)) <= 3 && diff != 0
+}
+
+func SameDirection(diff, prev int) bool {
+	return diff < 0 && prev < 0 || diff > 0 && prev > 0
+}
+
+func ValidSlice(slice []int) bool {
+	return Safe(slice[2]-slice[1]) &&
+		Safe(slice[1]-slice[0]) &&
+		SameDirection(slice[2]-slice[1], slice[1]-slice[0])
+}
+
+func ProcessRow(row []int, removals int, maxRemovals int) bool {
+	var safeRow bool
+check:
+	for j := range len(row) - 2 {
+		switch {
+		case !ValidSlice(row[j : j+3]):
+			if removals < maxRemovals {
+				// Try removing all the three elements
+				for k := 0; k < 3; k++ {
+					niter := append([]int{}, row[:j+k]...)
+					niter = append(niter, row[j+k+1:]...)
+					if ProcessRow(niter, removals+1, maxRemovals) {
+						return true
+					}
+				}
+			}
+			safeRow = false
+			break check
+		default:
+			safeRow = true
+		}
+	}
+	return safeRow
+}
+
 func part1(input string) int {
 	parsed := parseInput(input)
 	var safe int
 	for i := range parsed {
-		var safeRow bool
-	checker:
-		for j := range len(parsed[i]) - 2 {
-			check := parsed[i][j : j+3]
-			diff := check[2] - check[1]
-			prev := check[1] - check[0]
-			switch {
-			case
-				diff == 0,
-				prev == 0,
-				math.Abs(float64(diff)) > 3,
-				math.Abs(float64(prev)) > 3,
-				diff < 0 && prev > 0,
-				diff > 0 && prev < 0:
-				slog.Debug("Not safe", "row", parsed[i], "diff", diff, "prev", prev)
-				safeRow = false
-				break checker
-			default:
-				safeRow = true
-			}
-		}
-		if safeRow {
+		if ProcessRow(parsed[i], 0, 0) { // no removals in part 1
 			slog.Debug("Safe", "row", parsed[i])
 			safe++
+		} else {
+			slog.Debug("Unsafe", "row", parsed[i])
 		}
 	}
 
@@ -75,7 +95,18 @@ func part1(input string) int {
 }
 
 func part2(input string) int {
-	return 0
+	parsed := parseInput(input)
+	var safe int
+	for i := range parsed {
+		if ProcessRow(parsed[i], 0, 1) { // one removal in part 2
+			slog.Debug("Safe", "row", parsed[i])
+			safe++
+		} else {
+			slog.Debug("Unsafe", "row", parsed[i])
+		}
+	}
+
+	return safe
 }
 
 func parseInput(input string) (ans [][]int) {
