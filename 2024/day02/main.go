@@ -23,6 +23,13 @@ func init() {
 	}
 }
 
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 func main() {
 	var part int
 	flag.IntVar(&part, "part", 1, "part 1 or 2")
@@ -60,11 +67,13 @@ check:
 	for j := range len(row) - 2 {
 		switch {
 		case !ValidSlice(row[j : j+3]):
+			slog.Debug("Checking", "row", row, "slice", row[j:j+3])
 			if removals < maxRemovals {
 				// Try removing all the three elements
 				for k := 0; k < 3; k++ {
-					niter := append([]int{}, row[:j+k]...)
+					niter := append([]int{}, row[max(0, j-1):j+k]...)
 					niter = append(niter, row[j+k+1:]...)
+					slog.Debug("next iter", "row", niter)
 					if ProcessRow(niter, removals+1, maxRemovals) {
 						return true
 					}
