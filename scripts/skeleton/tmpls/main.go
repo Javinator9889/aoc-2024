@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/Javinator9889/aoc-2024/cast"
@@ -23,9 +24,14 @@ func init() {
 
 func main() {
 	var part int
+	var debug bool
 	flag.IntVar(&part, "part", 1, "part 1 or 2")
+	flag.BoolVar(&debug, "debug", false, "debug mode")
 	flag.Parse()
 	fmt.Println("Running part", part)
+	if debug {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
 
 	if part == 1 {
 		ans := part1(input)
