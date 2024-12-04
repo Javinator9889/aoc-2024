@@ -7,12 +7,13 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/Javinator9889/aoc-2024/cast"
 	"github.com/Javinator9889/aoc-2024/util"
 )
 
 //go:embed input.txt
 var input string
+
+const search = "XMAS"
 
 func init() {
 	// do this in init (not main) so test file has same input
@@ -44,20 +45,48 @@ func main() {
 	}
 }
 
-func part1(input string) int {
+func part1(input string) (count int) {
 	parsed := parseInput(input)
-	_ = parsed
+	for i, line := range parsed {
+		for j, char := range []byte(line) {
+			// Look for the first character of the search string
+			if char != search[0] {
+				continue
+			}
+			// Check if the rest of the search string is in any direction
+			for _, dir := range []struct{ x, y int }{
+				{1, 0},   // right
+				{0, 1},   // down
+				{1, 1},   // down-right
+				{1, -1},  // up-right
+				{-1, 1},  // down-left
+				{-1, -1}, // up-left
+				{-1, 0},  // left
+				{0, -1},  // up
+			} {
+				for k := 1; k < len(search); k++ {
+					x, y := i+dir.x*k, j+dir.y*k
+					if x < 0 || x >= len(parsed) || y < 0 || y >= len(parsed[0]) {
+						break
+					}
+					if parsed[x][y] != search[k] {
+						break
+					}
+					if k == len(search)-1 {
+						count++
+					}
+				}
+			}
+		}
+	}
 
-	return 0
+	return count
 }
 
 func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans []int) {
-	for _, line := range strings.Split(input, "\n") {
-		ans = append(ans, cast.ToInt(line))
-	}
-	return ans
+func parseInput(input string) []string {
+	return strings.Split(input, "\n")
 }

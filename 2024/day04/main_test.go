@@ -5,7 +5,16 @@ import (
 	"testing"
 )
 
-var example = ``
+var example = `MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX`
 
 func Test_part1(t *testing.T) {
 	tests := []struct {
@@ -16,13 +25,13 @@ func Test_part1(t *testing.T) {
 		{
 			name:  "example",
 			input: example,
-			want:  0,
+			want:  18,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "actual",
+			input: input,
+			want:  2297,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
