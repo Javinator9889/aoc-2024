@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Javinator9889/aoc-2024/cast"
@@ -83,8 +85,55 @@ func part1(input string) (centerSum int) {
 	return
 }
 
-func part2(input string) int {
-	return 0
+func With(rules map[int]*Rule) Sorter {
+	w := func(i, j int) bool {
+		return slices.Contains(rules[i].before, j)
+	}
+	return Sorter{with: w, changed: false}
+}
+
+type Sorter struct {
+	with    func(i, j int) bool
+	page    []int
+	changed bool
+}
+
+func (s *Sorter) Len() int {
+	return len(s.page)
+}
+
+func (s *Sorter) Swap(i, j int) {
+	s.changed = true
+	s.page[i], s.page[j] = s.page[j], s.page[i]
+}
+
+func (s *Sorter) Less(i, j int) bool {
+	return s.with(s.page[i], s.page[j])
+}
+
+func (s *Sorter) Sort(page []int) {
+	s.page = page
+	sort.Sort(s)
+}
+
+func (s *Sorter) Changed() bool {
+	return s.changed
+}
+
+func part2(input string) (centerSum int) {
+	rules, pages := parseInput(input)
+	// For this part, the algorithm is the same but we have to consider the incorrectly-ordered
+	// pages and sort them according to the rules.
+	for i := range pages {
+		slog.Debug("Page", "i", i, "pages", pages[i])
+		sorter := With(rules)
+		sorter.Sort(pages[i])
+		slog.Debug("Sorted", "i", i, "pages", pages[i])
+		if sorter.Changed() {
+			centerSum += pages[i][len(pages[i])/2]
+		}
+	}
+	return
 }
 
 func parseInput(input string) (rules map[int]*Rule, pages [][]int) {
