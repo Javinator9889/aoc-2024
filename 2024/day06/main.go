@@ -63,6 +63,7 @@ type Position struct {
 	x, y     int
 	obstacle bool
 	visited  bool
+	dir      Dir
 }
 
 type Guard struct {
@@ -81,43 +82,80 @@ func (g *Guard) moveForward() {
 	g.y += g.dir.y
 }
 
-func part1(input string) (uniqueVisited int) {
-	mapp, guard := parseInput(input)
+// Makes the guard go through the map and returns the number of unique positions visited
+// before the guard leaves the map. If the guard enters a loop, it will return an error.
+func (g *Guard) Go(mapp Map) (int, error) {
+	uniqueVisited := 0
 	for {
-		slog.Debug("Guard", "guard", guard)
 		// First, mark out current position as visited
-		if !mapp[guard.y][guard.x].visited {
-			slog.Debug("Visited", "guard", guard, "position", mapp[guard.y][guard.x])
-			mapp[guard.y][guard.x].visited = true
+		if !mapp[g.y][g.x].visited {
+			mapp[g.y][g.x].visited = true
+			mapp[g.y][g.x].dir = g.dir
 			uniqueVisited++
+		} else {
+			// The guard has visited this position before. Check if the direction is the same
+			if mapp[g.y][g.x].dir == g.dir {
+				return uniqueVisited, fmt.Errorf("loop detected at position (%d, %d)", g.x, g.y)
+			}
 		}
 		// The guard moves depending on the direction. There are two posibilites:
 		// 1. There is an obstacle in front of the guard.
 		// 2. There is no obstacle in front of the guard.
 		// If there is an obstacle, the guard will turn right. If there is no obstacle,
 		// the guard will move forward.
-		next := Position{x: guard.x + guard.dir.x, y: guard.y + guard.dir.y}
+		next := Position{x: g.x + g.dir.x, y: g.y + g.dir.y}
 		if mapp.outOfBounds(next) {
-			slog.Debug("Out of bounds", "next", next)
-			break // The guard has left the map
+			return uniqueVisited, nil
 		}
-		slog.Debug("Next", "next", mapp[next.y][next.x])
 		if mapp[next.y][next.x].obstacle {
 			// Turn right
-			guard.dir = Dir{-guard.dir.y, guard.dir.x}
-			slog.Debug("Turn right", "guard", guard)
+			g.dir = Dir{-g.dir.y, g.dir.x}
 		} else {
 			// Move forward
-			guard.moveForward()
-			slog.Debug("Move forward", "guard", guard)
+			g.moveForward()
 		}
 	}
+}
 
+func (m Map) Clone() (clone Map) {
+	clone = make(Map, len(m))
+	for i := range m {
+		clone[i] = make([]Position, len(m[i]))
+		copy(clone[i], m[i])
+	}
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part1(input string) int {
+	mapp, guard := parseInput(input)
+	uniqueVisited, err := guard.Go(mapp)
+	if err != nil {
+		panic(err)
+	}
+	return uniqueVisited
+}
+
+func part2(input string) (loops int) {
+	mapp, guard := parseInput(input)
+	// We're going bruteforce here! We have to place an item in a location that causes the
+	// guard to go in a loop. We will check if the guard has visited the same position twice
+	// with the same direction, and if it has, we will break the loop.
+	for i := range mapp {
+		for j := range mapp[i] {
+			// If the current position matches the guard or it's already an obstacle, skip
+			if (guard.x == j && guard.y == i) || mapp[i][j].obstacle {
+				continue
+			}
+			tmp := mapp.Clone()
+			tmp[i][j].obstacle = true
+			tmpGuard := guard
+			_, err := tmpGuard.Go(tmp)
+			if err != nil {
+				loops++
+			}
+		}
+	}
+	return
 }
 
 func parseInput(input string) (mapp Map, guard Guard) {

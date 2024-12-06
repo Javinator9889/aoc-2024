@@ -27,11 +27,11 @@ func Test_part1(t *testing.T) {
 			input: example,
 			want:  41,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "actual",
+			input: input,
+			want:  5453,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
@@ -52,13 +52,13 @@ func Test_part2(t *testing.T) {
 		{
 			name:  "example",
 			input: example,
-			want:  0,
+			want:  6,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "actual",
+			input: input,
+			want:  2188,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
