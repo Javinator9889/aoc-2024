@@ -51,7 +51,7 @@ func Test_part2(t *testing.T) {
 		{
 			name:  "example",
 			input: example,
-			want:  0,
+			want:  11387,
 		},
 		// {
 		// 	name:  "actual",
