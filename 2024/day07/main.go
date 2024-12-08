@@ -144,13 +144,14 @@ type Pather struct {
 	pos       int
 	value     int
 	operation Op
+	origin    *Pather
 }
 
 type Grid struct {
 	goal        int
 	numbers     []int
 	validOps    []Op
-	IsValidRank func(int) bool
+	IsValidCost func(int) bool
 }
 type Path []*Node
 
@@ -177,36 +178,27 @@ func (p Pather) Neighbors(g *Grid) []Pather {
 			value:     g.numbers[p.pos+1],
 			operation: op,
 			pos:       p.pos + 1,
+			origin:    &p,
 		}
 		neighbors = append(neighbors, neighbor)
 	}
 	return neighbors
 }
 
+func (p Pather) EstimatedCost(g *Grid) int {
+	return -p.pos
+}
+
 func (g *Grid) AStar() Path {
-	// var closedSet Path
 	nm := nodeMap{}
 	nq := &priorityQueue{}
 	heap.Init(nq)
 	// We consider the `cost` the cumulative result of the operations
-	from := Pather{
-		value: g.numbers[0],
-		pos:   0,
-	}
+	from := Pather{value: g.numbers[0]}
 	fromNode := nm.Get(from)
 	fromNode.open = true
-	fromNode.rank = g.goal - from.value
 	fromNode.cost = from.value
 	fromNode.prev = nil
-	// from := &Node{
-	// 	value:     g.numbers[0],
-	// 	cost:      g.numbers[0],
-	// 	rank:      0,
-	// 	prev:      nil,
-	// 	open:      true,
-	// 	pos:       0,
-	// 	neighbors: nil,
-	// }
 	heap.Push(nq, fromNode)
 
 	for {
@@ -231,13 +223,13 @@ func (g *Grid) AStar() Path {
 		// Get the neighbors of the current node
 		for _, neighbor := range current.pather.Neighbors(g) {
 			cost := neighbor.operation.Cal(current.cost, neighbor.value)
-			rank := g.goal - cost
-			if !g.IsValidRank(rank) {
+			if !g.IsValidCost(cost) {
 				// Skip if the rank is invalid
 				continue
 			}
 			neighborNode := nm.Get(neighbor)
-			if current.rank < neighborNode.rank {
+			// If we are closer to the goal...
+			if cost > neighborNode.cost {
 				if neighborNode.open {
 					heap.Remove(nq, neighborNode.index)
 				}
@@ -246,31 +238,19 @@ func (g *Grid) AStar() Path {
 			}
 			if !neighborNode.open && !neighborNode.closed {
 				neighborNode.open = true
-				neighborNode.rank = rank
+				neighborNode.rank = neighbor.EstimatedCost(g) - cost
 				neighborNode.cost = cost
 				neighborNode.prev = current
 				heap.Push(nq, neighborNode)
 			}
-
-			// if !neighbor.open && !neighbor.closed {
-			// 	neighbor.open = true
-			// 	heap.Push(nq, neighbor)
-			// } else if neighbor.open {
-			// 	heap.Remove(nq, neighbor.index)
-			// 	neighbor.open = false
-			// 	neighbor.closed = false
-			// If the neighbor is already open, we check if the rank is worse
-			// if current.rank < neighbor.rank {
-			// 	if neighbor.open {
-			// 		heap.Remove(nq, neighbor.index)
-			// 	}
-			// 	neighbor.open = false
-			// 	neighbor.closed = false
-			// }
-			// }
 		}
 	}
 	return nil
+}
+
+type Row struct {
+	value   int
+	numbers []int
 }
 
 func part1(input string) (solvable int) {
@@ -278,22 +258,22 @@ func part1(input string) (solvable int) {
 	// a set of valid operations to apply to. The goal is to reach a certain number with
 	// the minimum number of operations.
 	parsed := parseInput(input)
-	for n, nums := range parsed {
+	for _, row := range parsed {
 		grid := Grid{
-			goal:     n,
-			numbers:  nums,
+			goal:     row.value,
+			numbers:  row.numbers,
 			validOps: []Op{ADD, MUL},
-			IsValidRank: func(rank int) bool {
-				return rank >= 0
+			IsValidCost: func(cost int) bool {
+				return cost <= row.value
 			},
 		}
 		path := grid.AStar()
 		// We have to use all the numbers
-		if path != nil && len(path) == len(nums) {
-			slog.Debug("Path for", "n", n, "path", path)
-			solvable += n
+		if path != nil && len(path) == len(row.numbers) {
+			slog.Debug("Path for", "n", row.value, "path", path)
+			solvable += row.value
 		} else if path != nil {
-			slog.Warn("Not using all numbers", "n", n, "path", path, "nums", nums)
+			slog.Warn("Not using all numbers", "n", row.value, "path", path, "nums", row.numbers)
 		}
 	}
 	return
@@ -303,15 +283,19 @@ func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans map[int][]int) {
-	ans = make(map[int][]int)
+func parseInput(input string) (ans []Row) {
+	ans = make([]Row, 0)
 	for _, line := range strings.Split(input, "\n") {
 		items := strings.Split(line, ": ")
 		k, v := cast.ToInt(items[0]), strings.Split(items[1], " ")
-		ans[k] = make([]int, len(v))
-		for i := range v {
-			ans[k][i] = cast.ToInt(v[i])
+		row := Row{
+			value:   k,
+			numbers: make([]int, len(v)),
 		}
+		for i := range v {
+			row.numbers[i] = cast.ToInt(v[i])
+		}
+		ans = append(ans, row)
 	}
 	return
 }
