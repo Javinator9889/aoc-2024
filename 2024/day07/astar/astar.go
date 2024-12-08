@@ -62,7 +62,13 @@ func (nm nodeMap) Get(p PathFinder) *Node {
 // are no more nodes to explore.
 //
 // If `exhaustive` is false, the algorithm will try to find any path that yields the result.
-// Otherwise, it will try to find the path that uses all the numbers in the array.
+// Otherwise, it will try to find the path that uses all the numbers in the array. The `cost`
+// always refers the cumulative result of the operations. Depending on the operations available
+// in the grid, it's possible to have multiple paths to the goal. But it's also possible that
+// a path is unreachable from a certain state (e.g. the cost is greater than the goal and there
+// are no "sub" operations). The `IsValidCost` function is used to discard states - thus optimize
+// the search - by checking if the cost is valid. Simply returning `true` will make the algorithm
+// to explore all the states, which could take longer.
 func (g *Grid) AStar(exhaustive bool) Path {
 	nm := nodeMap{}
 	nq := &PriorityQueue{}
@@ -98,8 +104,8 @@ func (g *Grid) AStar(exhaustive bool) Path {
 		// Get the neighbors of the current node
 		for _, neighbor := range current.finder.Neighbors(g) {
 			cost := neighbor.operation.Cal(current.cost, neighbor.value)
+			// Skip if the cost is invalid
 			if !g.IsValidCost(cost) {
-				// Skip if the rank is invalid
 				continue
 			}
 			neighborNode := nm.Get(neighbor)

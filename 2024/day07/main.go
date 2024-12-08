@@ -60,7 +60,8 @@ func part1(input string) (solvable int) {
 	// The cost of the operation is the value of the number, and the heuristic is the position
 	// of the number in the array. The algorithm stops when the cost of the operation is greater
 	// than the goal.
-	// The algorithm is implemented in the astar package.
+	// The algorithm is implemented in the astar package. The `IsValidCost` verifies the obtained
+	// cost does not exceed the goal.
 	parsed := parseInput(input)
 	for _, row := range parsed {
 		grid := astar.Grid{
@@ -83,8 +84,29 @@ func part1(input string) (solvable int) {
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part2(input string) (solvable int) {
+	// Part 2 is an extension of part 1, but with an extra operation: Concatenation. Just repeat
+	// the process of part 1, but adding the new operation to the set of valid operations.
+	parsed := parseInput(input)
+	for _, row := range parsed {
+		grid := astar.Grid{
+			Goal:     row.value,
+			Numbers:  row.numbers,
+			ValidOps: []ops.Op{ops.ADD, ops.MUL, ops.CONCAT},
+			IsValidCost: func(cost int) bool {
+				return cost <= row.value
+			},
+		}
+		path := grid.AStar(true /* exhaustive */)
+		// We have to use all the numbers
+		if path != nil && len(path) == len(row.numbers) {
+			slog.Debug("Path for", "n", row.value, "path", path)
+			solvable += row.value
+		} else if path != nil {
+			slog.Warn("Not using all numbers", "n", row.value, "path", path, "nums", row.numbers)
+		}
+	}
+	return
 }
 
 func parseInput(input string) (ans []Row) {
