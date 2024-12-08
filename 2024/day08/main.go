@@ -5,11 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"math"
 	"strings"
 
 	"github.com/Javinator9889/aoc-2024/util"
-	"golang.org/x/exp/constraints"
 )
 
 //go:embed input.txt
@@ -45,10 +43,6 @@ func main() {
 	}
 }
 
-type Number interface {
-	constraints.Integer | constraints.Float
-}
-
 const (
 	OPEN = '.' // Open space
 )
@@ -67,29 +61,8 @@ type Location struct {
 
 type Vector Location
 
-func (l Location) Distance(o Location) float64 {
-	return math.Sqrt(math.Pow(float64(l.x-o.x), 2) + math.Pow(float64(l.y-o.y), 2))
-}
-
 func (l Location) Direction(o Location) Vector {
 	return Vector{o.x - l.x, o.y - l.y}
-}
-
-func (l Location) Line(o Location) (int, int, int) {
-	a := l.y - o.y
-	b := o.x - l.x
-	c := a*l.y + b*l.x
-	return a, b, c
-}
-
-func Cramer[T Number](a1, a2, b1, b2, c1, c2 T) (float64, float64) {
-	det := a1*b2 - a2*b1
-	if det == 0 {
-		return 0, 0
-	}
-	x := (c1*b2 - c2*b1) / det
-	y := (a1*c2 - a2*c1) / det
-	return float64(x), float64(y)
 }
 
 // The reflection of a point simply takes the direction vector of the line between the two points
@@ -125,13 +98,25 @@ func part1(input string) (antinodes int) {
 				}
 				reflection := locs[a].Reflection(locs[b])
 				if grid.InBounds(reflection) {
-					slog.Debug("Reflection", "freq", string(freq), "a", locs[a], "b", locs[b], "reflection", reflection)
+					slog.Debug(
+						"Reflection",
+						"freq", string(freq),
+						"a", locs[a],
+						"b", locs[b],
+						"reflection", reflection,
+					)
 					if !grid[reflection.x][reflection.y].antinode {
 						grid[reflection.x][reflection.y].antinode = true
 						antinodes++
 					}
 				} else {
-					slog.Warn("Reflection out of bounds", "freq", string(freq), "a", locs[a], "b", locs[b], "reflection", reflection)
+					slog.Debug(
+						"Reflection out of bounds",
+						"freq", string(freq),
+						"a", locs[a],
+						"b", locs[b],
+						"reflection", reflection,
+					)
 				}
 			}
 		}
@@ -165,10 +150,22 @@ func part2(input string) (antinodes int) {
 				for {
 					reflection := prev.Reflection(point)
 					if !grid.InBounds(reflection) {
-						slog.Warn("Reflection out of bounds", "freq", string(freq), "a", prev, "b", point, "reflection", reflection)
+						slog.Debug(
+							"Reflection out of bounds",
+							"freq", string(freq),
+							"a", prev,
+							"b", point,
+							"reflection", reflection,
+						)
 						break
 					}
-					slog.Debug("Reflection", "freq", string(freq), "a", prev, "b", point, "reflection", reflection)
+					slog.Debug(
+						"Reflection",
+						"freq", string(freq),
+						"a", prev,
+						"b", point,
+						"reflection", reflection,
+					)
 					if !grid[reflection.x][reflection.y].antinode {
 						grid[reflection.x][reflection.y].antinode = true
 						antinodes++
