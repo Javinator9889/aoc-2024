@@ -117,16 +117,33 @@ func (pq *priorityQueue) Pop() interface{} {
 }
 
 type Node struct {
+	pather Pather
+	cost   int
+	index  int
+	rank   int
+	prev   *Node
+	open   bool
+	closed bool
+}
+
+type nodeMap map[Pather]*Node
+
+func (nm nodeMap) Get(p Pather) *Node {
+	res, ok := nm[p]
+	if !ok {
+		res = &Node{
+			pather: p,
+			rank:   -1,
+		}
+		nm[p] = res
+	}
+	return res
+}
+
+type Pather struct {
 	pos       int
 	value     int
-	cost      int
 	operation Op
-	index     int
-	rank      int
-	prev      *Node
-	open      bool
-	closed    bool
-	neighbors []*Node
 }
 
 type Grid struct {
@@ -141,57 +158,56 @@ func (p Path) String() string {
 	var sb strings.Builder
 	for _, n := range p {
 		op := ""
-		if n.operation != "" {
-			op = " " + n.operation.String() + " "
+		if n.pather.operation != "" {
+			op = " " + n.pather.operation.String() + " "
 		}
-		sb.WriteString(fmt.Sprintf("%s%v", op, n.value))
+		sb.WriteString(fmt.Sprintf("%s%v", op, n.pather.value))
 	}
 	return sb.String()
 }
 
-func (n *Node) Neighbors(g *Grid) []*Node {
-	if n.neighbors != nil {
-		return n.neighbors
-	}
-	n.neighbors = make([]*Node, 0)
+func (p Pather) Neighbors(g *Grid) []Pather {
+	neighbors := make([]Pather, 0)
 	// Check if we are at the end of the numbers
-	if n.pos == len(g.numbers)-1 {
-		return n.neighbors
+	if p.pos == len(g.numbers)-1 {
+		return neighbors
 	}
 	for _, op := range g.validOps {
-		cost := op.Cal(n.cost, g.numbers[n.pos+1])
-		neighbor := &Node{
-			value:     g.numbers[n.pos+1],
-			cost:      cost,
+		neighbor := Pather{
+			value:     g.numbers[p.pos+1],
 			operation: op,
-			prev:      n,
-			open:      false,
-			closed:    false,
-			rank:      g.goal - cost,
-			pos:       n.pos + 1,
+			pos:       p.pos + 1,
 		}
-		if g.IsValidRank(neighbor.rank) {
-			n.neighbors = append(n.neighbors, neighbor)
-		}
+		neighbors = append(neighbors, neighbor)
 	}
-	return n.neighbors
+	return neighbors
 }
 
 func (g *Grid) AStar() Path {
 	// var closedSet Path
+	nm := nodeMap{}
 	nq := &priorityQueue{}
 	heap.Init(nq)
 	// We consider the `cost` the cumulative result of the operations
-	from := &Node{
-		value:     g.numbers[0],
-		cost:      g.numbers[0],
-		rank:      0,
-		prev:      nil,
-		open:      true,
-		pos:       0,
-		neighbors: nil,
+	from := Pather{
+		value: g.numbers[0],
+		pos:   0,
 	}
-	heap.Push(nq, from)
+	fromNode := nm.Get(from)
+	fromNode.open = true
+	fromNode.rank = g.goal - from.value
+	fromNode.cost = from.value
+	fromNode.prev = nil
+	// from := &Node{
+	// 	value:     g.numbers[0],
+	// 	cost:      g.numbers[0],
+	// 	rank:      0,
+	// 	prev:      nil,
+	// 	open:      true,
+	// 	pos:       0,
+	// 	neighbors: nil,
+	// }
+	heap.Push(nq, fromNode)
 
 	for {
 		// There are no more nodes to explore
@@ -203,7 +219,7 @@ func (g *Grid) AStar() Path {
 		current.closed = true
 
 		// We reached the goal. Verify that we used all the numbers
-		if current.rank == 0 && current.pos == len(g.numbers)-1 {
+		if current.cost == g.goal && current.pather.pos == len(g.numbers)-1 {
 			var path Path
 			for current != nil {
 				path = append(Path{current}, path...)
@@ -213,20 +229,45 @@ func (g *Grid) AStar() Path {
 		}
 
 		// Get the neighbors of the current node
-		for _, neighbor := range current.Neighbors(g) {
-			if !neighbor.open && !neighbor.closed {
-				neighbor.open = true
-				heap.Push(nq, neighbor)
-			} else if neighbor.open {
-				// If the neighbor is already open, we check if the rank is worse
-				if current.rank < neighbor.rank {
-					if neighbor.open {
-						heap.Remove(nq, neighbor.index)
-					}
-					neighbor.open = false
-					neighbor.closed = false
-				}
+		for _, neighbor := range current.pather.Neighbors(g) {
+			cost := neighbor.operation.Cal(current.cost, neighbor.value)
+			rank := g.goal - cost
+			if !g.IsValidRank(rank) {
+				// Skip if the rank is invalid
+				continue
 			}
+			neighborNode := nm.Get(neighbor)
+			if current.rank < neighborNode.rank {
+				if neighborNode.open {
+					heap.Remove(nq, neighborNode.index)
+				}
+				neighborNode.open = false
+				neighborNode.closed = false
+			}
+			if !neighborNode.open && !neighborNode.closed {
+				neighborNode.open = true
+				neighborNode.rank = rank
+				neighborNode.cost = cost
+				neighborNode.prev = current
+				heap.Push(nq, neighborNode)
+			}
+
+			// if !neighbor.open && !neighbor.closed {
+			// 	neighbor.open = true
+			// 	heap.Push(nq, neighbor)
+			// } else if neighbor.open {
+			// 	heap.Remove(nq, neighbor.index)
+			// 	neighbor.open = false
+			// 	neighbor.closed = false
+			// If the neighbor is already open, we check if the rank is worse
+			// if current.rank < neighbor.rank {
+			// 	if neighbor.open {
+			// 		heap.Remove(nq, neighbor.index)
+			// 	}
+			// 	neighbor.open = false
+			// 	neighbor.closed = false
+			// }
+			// }
 		}
 	}
 	return nil
