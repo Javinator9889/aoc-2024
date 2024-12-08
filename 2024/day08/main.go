@@ -140,8 +140,46 @@ func part1(input string) (antinodes int) {
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part2(input string) (antinodes int) {
+	grid, antennas := parseInput(input)
+	// For the second part, we have to take into account the resonant harmonics. This simply means
+	// the antennas emit in a straight line to any grid position, needed at least two antennas of
+	// the same frequency aligned. The antinodes are now located all along the line within the grid
+	for freq, locs := range antennas {
+		if len(locs) < 2 {
+			continue
+		}
+		// Calculate the reflection of the antennas
+		for a := range locs {
+			for b := range locs {
+				if a == b {
+					loc := locs[a]
+					if !grid[loc.x][loc.y].antinode {
+						grid[loc.x][loc.y].antinode = true
+						antinodes++
+					}
+					continue
+				}
+				prev := locs[a]
+				point := locs[b]
+				for {
+					reflection := prev.Reflection(point)
+					if !grid.InBounds(reflection) {
+						slog.Warn("Reflection out of bounds", "freq", string(freq), "a", prev, "b", point, "reflection", reflection)
+						break
+					}
+					slog.Debug("Reflection", "freq", string(freq), "a", prev, "b", point, "reflection", reflection)
+					if !grid[reflection.x][reflection.y].antinode {
+						grid[reflection.x][reflection.y].antinode = true
+						antinodes++
+					}
+					prev = point
+					point = reflection
+				}
+			}
+		}
+	}
+	return
 }
 
 func parseInput(input string) (Grid, Antennas) {
