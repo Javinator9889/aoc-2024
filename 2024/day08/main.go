@@ -5,10 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 
-	"github.com/Javinator9889/aoc-2024/cast"
 	"github.com/Javinator9889/aoc-2024/util"
+	"golang.org/x/exp/constraints"
 )
 
 //go:embed input.txt
@@ -44,20 +45,117 @@ func main() {
 	}
 }
 
-func part1(input string) int {
-	parsed := parseInput(input)
-	_ = parsed
+type Number interface {
+	constraints.Integer | constraints.Float
+}
 
-	return 0
+const (
+	OPEN = '.' // Open space
+)
+
+type Loc struct {
+	frequency rune
+	x, y      int
+	antinode  bool
+}
+
+type Frequency rune
+
+type Location struct {
+	x, y int
+}
+
+type Vector Location
+
+func (l Location) Distance(o Location) float64 {
+	return math.Sqrt(math.Pow(float64(l.x-o.x), 2) + math.Pow(float64(l.y-o.y), 2))
+}
+
+func (l Location) Direction(o Location) Vector {
+	return Vector{o.x - l.x, o.y - l.y}
+}
+
+func (l Location) Line(o Location) (int, int, int) {
+	a := l.y - o.y
+	b := o.x - l.x
+	c := a*l.y + b*l.x
+	return a, b, c
+}
+
+func Cramer[T Number](a1, a2, b1, b2, c1, c2 T) (float64, float64) {
+	det := a1*b2 - a2*b1
+	if det == 0 {
+		return 0, 0
+	}
+	x := (c1*b2 - c2*b1) / det
+	y := (a1*c2 - a2*c1) / det
+	return float64(x), float64(y)
+}
+
+// The reflection of a point simply takes the direction vector of the line between the two points
+// and adds it to the second point.
+func (l Location) Reflection(o Location) Location {
+	vd := l.Direction(o)
+	px, py := o.x+vd.x, o.y+vd.y
+	return Location{px, py}
+}
+
+type Antennas map[Frequency][]Location
+
+type Grid [][]*Loc
+
+func (g Grid) InBounds(l Location) bool {
+	return l.x >= 0 && l.x < len(g) && l.y >= 0 && l.y < len(g[0])
+}
+
+func part1(input string) (antinodes int) {
+	grid, antennas := parseInput(input)
+	// Calculate the antinode of each frequency. The antinode is defined as the point in the
+	// grid that is aligned with the antennas of the same frequency. The antennas must be aligned
+	// and be twice as far away as the other.
+	for freq, locs := range antennas {
+		if len(locs) < 2 {
+			continue
+		}
+		// Calculate the reflection of the antennas
+		for a := range locs {
+			for b := range locs {
+				if a == b {
+					continue
+				}
+				reflection := locs[a].Reflection(locs[b])
+				if grid.InBounds(reflection) {
+					slog.Debug("Reflection", "freq", string(freq), "a", locs[a], "b", locs[b], "reflection", reflection)
+					if !grid[reflection.x][reflection.y].antinode {
+						grid[reflection.x][reflection.y].antinode = true
+						antinodes++
+					}
+				} else {
+					slog.Warn("Reflection out of bounds", "freq", string(freq), "a", locs[a], "b", locs[b], "reflection", reflection)
+				}
+			}
+		}
+	}
+
+	return
 }
 
 func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans []int) {
-	for _, line := range strings.Split(input, "\n") {
-		ans = append(ans, cast.ToInt(line))
+func parseInput(input string) (Grid, Antennas) {
+	res := make(Grid, 0)
+	antennas := make(Antennas)
+	for x, line := range strings.Split(input, "\n") {
+		row := make([]*Loc, len(line))
+		for y, r := range line {
+			row[y] = &Loc{frequency: r, x: x, y: y}
+			if r != OPEN {
+				antennas[Frequency(r)] = append(antennas[Frequency(r)], Location{x, y})
+			}
+		}
+		res = append(res, row)
 	}
-	return ans
+	return res, antennas
 }
