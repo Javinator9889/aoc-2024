@@ -9,6 +9,9 @@ help: ## Show this help
 	@ grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 check-aoc-cookie:  ## ensures $AOC_SESSION_COOKIE env var is set
+	@ if [ -f .env ]; then \
+		export $(shell cat .env | xargs); \
+	fi
 	@ test $${AOC_SESSION_COOKIE?env var not set}
 
 skeleton: ## make skeleton main(_test).go files, optional: $DAY and $YEAR
@@ -38,6 +41,8 @@ prompt: check-aoc-cookie ## get prompt, requires $AOC_SESSION_COOKIE, optional: 
 		go run scripts/cmd/prompt/main.go -cookie $(AOC_SESSION_COOKIE); \
 	fi
 
+all: skeleton input prompt ## run skeleton, input and prompt, optional: $DAY and $YEAR
+
 run-%: ## run day $*, optional: $YEAR
 	@ if [[ -n $$YEAR ]]; then \
 		go run $(YEAR)/day$*/main.go -part 1; \
@@ -53,3 +58,5 @@ check-%: ## run day $*, optional: $YEAR
 	else \
 		go test $(MODULE)/$(TY)/day$*; \
 	fi
+
+.PHONY: help skeleton input prompt run-% check-% all
