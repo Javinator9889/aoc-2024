@@ -5,8 +5,7 @@ import (
 	"testing"
 )
 
-var example = `
-89010123
+var example = `89010123
 78121874
 87430965
 96549874
