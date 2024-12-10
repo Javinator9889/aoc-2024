@@ -39,7 +39,7 @@ func (b Block) Free() int {
 }
 
 // Adds a file, increasing the block's size
-func (b *Block) New(file *File) int {
+func (b *Block) Push(file *File) int {
 	b.files = append(b.files, file)
 	b.MaxSize += file.Length
 	return file.Length
@@ -80,15 +80,18 @@ func (b *Block) PopLast() *File {
 }
 
 func (b Block) Chksum(offset *int) (chksum int) {
+	base := *offset
 	for _, f := range b.files {
 		if f == nil {
 			continue
 		}
 		for i := 0; i < f.Length; i++ {
-			chksum += f.ID * *offset
-			*offset++
+			chksum += f.ID * base
+			base++
 		}
 	}
+	// The offset is increased by the block's size
+	*offset += b.MaxSize
 	return
 }
 
