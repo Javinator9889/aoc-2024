@@ -80,9 +80,12 @@ var LEFT = Coordinate{0, -1}
 var RIGHT = Coordinate{0, 1}
 var COORDS = []Coordinate{UP, DOWN, LEFT, RIGHT}
 
-func Trailhead(from Coordinate, start Coordinate, grid Grid) int {
+func Trailhead(from Coordinate, start Coordinate, grid Grid, countTotal bool) int {
 	current := grid[start.i][start.j]
 	if current.height == 9 {
+		if countTotal {
+			return 1
+		}
 		if _, ok := current.visited[from]; !ok {
 			current.visited[from] = struct{}{}
 			return 1
@@ -105,7 +108,7 @@ func Trailhead(from Coordinate, start Coordinate, grid Grid) int {
 	}
 	ans := 0
 	for _, p := range paths {
-		ans += Trailhead(from, p, grid)
+		ans += Trailhead(from, p, grid, countTotal)
 	}
 	return ans
 }
@@ -120,15 +123,28 @@ func part1(input string) (reachable int) {
 				continue
 			}
 			from := Coordinate{i, j}
-			reachable += Trailhead(from, from, parsed)
+			reachable += Trailhead(from, from, parsed, false)
 		}
 	}
 
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part2(input string) (reachable int) {
+	parsed := parseInput(input)
+        slog.Debug("grid", "grid", parsed)
+        for i := range parsed {
+                for j := range parsed[i] {
+                        pos := parsed[i][j]
+                        if pos.height != 0 {
+                                continue
+                        }
+                        from := Coordinate{i, j}
+                        reachable += Trailhead(from, from, parsed, true)
+                }
+        }
+
+        return
 }
 
 func parseInput(input string) (ans Grid) {
