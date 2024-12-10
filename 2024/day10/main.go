@@ -46,7 +46,7 @@ func main() {
 
 type Position struct {
 	height  int
-	visited bool
+	visited map[Coordinate]struct{}
 }
 
 type Grid [][]*Position
@@ -80,11 +80,11 @@ var LEFT = Coordinate{0, -1}
 var RIGHT = Coordinate{0, 1}
 var COORDS = []Coordinate{UP, DOWN, LEFT, RIGHT}
 
-func Trailhead(start Coordinate, grid Grid) int {
+func Trailhead(from Coordinate, start Coordinate, grid Grid) int {
 	current := grid[start.i][start.j]
 	if current.height == 9 {
-		if !current.visited {
-			current.visited = true
+		if _, ok := current.visited[from]; !ok {
+			current.visited[from] = struct{}{}
 			return 1
 		}
 		return 0
@@ -105,7 +105,7 @@ func Trailhead(start Coordinate, grid Grid) int {
 	}
 	ans := 0
 	for _, p := range paths {
-		ans += Trailhead(p, grid)
+		ans += Trailhead(from, p, grid)
 	}
 	return ans
 }
@@ -119,7 +119,8 @@ func part1(input string) (reachable int) {
 			if pos.height != 0 {
 				continue
 			}
-			reachable += Trailhead(Coordinate{i, j}, parsed)
+			from := Coordinate{i, j}
+			reachable += Trailhead(from, from, parsed)
 		}
 	}
 
@@ -134,7 +135,11 @@ func parseInput(input string) (ans Grid) {
 	for i, line := range strings.Split(input, "\n") {
 		ans = append(ans, make([]*Position, 0, len(line)))
 		for _, c := range line {
-			ans[i] = append(ans[i], &Position{height: cast.ToInt(string(c)), visited: false})
+			pos := &Position{height: cast.ToInt(string(c))}
+			if pos.height == 9 {
+				pos.visited = make(map[Coordinate]struct{}, 0)
+			}
+			ans[i] = append(ans[i], pos)
 		}
 	}
 	return
