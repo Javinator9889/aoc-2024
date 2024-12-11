@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/Javinator9889/aoc-2024/cast"
 	"github.com/Javinator9889/aoc-2024/util"
@@ -87,19 +88,26 @@ func (s *Stone) String() string {
 	return sb.String()
 }
 
+func blink(times int, ref *Stone) int {
+	for i := 0; i < times; i++ {
+		start := time.Now()
+		for st := ref; st != nil; st = st.Blink() {
+		}
+		slog.Debug("Blink", "i", i, "elapsed", time.Since(start), "size", ref.Size())
+	}
+	return ref.Size()
+}
+
 func part1(input string) int {
 	stones := parseInput(input)
 	slog.Debug("Stones:", "stones", stones)
-	for i := 0; i < 25; i++ {
-		for stone := stones; stone != nil; stone = stone.Blink() {
-		}
-	}
-
-	return stones.Size()
+	return blink(25, stones)
 }
 
 func part2(input string) int {
-	return 0
+	stones := parseInput(input)
+	slog.Debug("Stones:", "stones", stones)
+	return blink(75, stones)
 }
 
 func parseInput(input string) (stones *Stone) {
