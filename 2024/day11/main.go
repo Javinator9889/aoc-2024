@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Javinator9889/aoc-2024/2024/day11/cache"
 	"github.com/Javinator9889/aoc-2024/cast"
 	"github.com/Javinator9889/aoc-2024/util"
 )
@@ -88,12 +89,45 @@ func (s *Stone) String() string {
 	return sb.String()
 }
 
+func digits(n int) (count int) {
+	for n > 0 {
+		n /= 10
+		count++
+	}
+	return
+}
+
+func (s *Stone) Stones(n int) int {
+	var stonesFn cache.Int2Func
+	stonesFn = cache.Cached(func(value, n int) (count int) {
+		prev := value
+		for i := 0; i < n; i++ {
+			switch {
+			case prev == 0:
+				prev = 1
+			case digits(prev)%2 == 0:
+				sv := cast.ToString(prev)
+				first, second := sv[:len(sv)/2], sv[len(sv)/2:]
+				prev = cast.ToInt(first)
+				if n-i > 0 {
+					count += stonesFn(cast.ToInt(second), n-i-1)
+				}
+			default:
+				prev *= 2024
+			}
+		}
+		count++ // Add the current stone
+		return
+	})
+	return stonesFn(s.value, n)
+}
+
 func blink(times int, ref *Stone) int {
 	for i := 0; i < times; i++ {
 		start := time.Now()
 		for st := ref; st != nil; st = st.Blink() {
 		}
-		slog.Debug("Blink", "i", i, "elapsed", time.Since(start), "size", ref.Size())
+		slog.Debug("Blink", "i", i, "elapsed", time.Since(start), "size", ref.Size(), "stones", ref)
 	}
 	return ref.Size()
 }
@@ -104,10 +138,17 @@ func part1(input string) int {
 	return blink(25, stones)
 }
 
-func part2(input string) int {
+func part2(input string) (count int) {
 	stones := parseInput(input)
 	slog.Debug("Stones:", "stones", stones)
-	return blink(75, stones)
+	start := time.Now()
+	for st := stones; st != nil; st = st.next {
+		istart := time.Now()
+		count += st.Stones(75)
+		slog.Debug("Stones", "count", count, "elapsed", time.Since(istart))
+	}
+	slog.Debug("Elapsed", "elapsed", time.Since(start))
+	return
 }
 
 func parseInput(input string) (stones *Stone) {
