@@ -16,6 +16,12 @@ MIIIIIJJEE
 MIIISIJEEE
 MMMISSJEEE`
 
+var example2 = `OOOOO
+OXOXO
+OOOOO
+OXOXO
+OOOOO`
+
 func Test_part1(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -23,15 +29,20 @@ func Test_part1(t *testing.T) {
 		want  int
 	}{
 		{
+			name:  "containing example",
+			input: example2,
+			want:  772,
+		},
+		{
 			name:  "example",
 			input: example,
 			want:  1930,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "actual",
+			input: input,
+			want:  1371306,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
