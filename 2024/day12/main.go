@@ -105,6 +105,29 @@ func (c *Cluster) calcPerimeter(garden Garden) {
 	}
 }
 
+// Gets how many sides the cluster has. A side is a number of flowers next to each other
+// in a row or column
+func (c *Cluster) calcSides(garden Garden) {
+	sides := map[string]struct{}{}
+	for _, flower := range c.flowers {
+		for _, dir := range [][]int{UP, DOWN, LEFT, RIGHT} {
+			// We determine the side by where we're coming from
+			side := fmt.Sprintf("%v%v%v%v", dir[0], dir[1], flower.x*dir[0], flower.y*dir[1])
+			if garden.outOfBounds(flower.x+dir[0], flower.y+dir[1]) {
+				// oobSide := fmt.Sprintf("%v%v", dir[0], dir[1])
+				sides[side] = struct{}{}
+				continue
+			}
+			next := garden[flower.x+dir[0]][flower.y+dir[1]]
+			if next.i != c.i {
+				sides[side] = struct{}{}
+			}
+		}
+	}
+	slog.Debug("Sides", "sides", sides)
+	c.sides = len(sides)
+}
+
 func (f *Flower) String() string {
 	return f.i
 }
@@ -114,6 +137,7 @@ type Cluster struct {
 	perimeter int
 	flowers   []*Flower
 	i         string
+	sides     int
 }
 
 func (c *Cluster) farUpLeft() (x, y int) {
@@ -191,7 +215,7 @@ func (c *Cluster) contains(o *Cluster) bool {
 func (c Cluster) String() string {
 	str := strings.Builder{}
 	str.WriteString("Cluster: {")
-	str.WriteString(fmt.Sprintf("area: %v, perimeter: %v, flowers: [", c.area, c.perimeter))
+	str.WriteString(fmt.Sprintf("area: %v, perimeter: %v, sides: %v, flowers: [", c.area, c.perimeter, c.sides))
 	for i, flower := range c.flowers {
 		str.WriteString(flower.String())
 		if i < len(c.flowers)-1 {
@@ -239,8 +263,41 @@ func part1(input string) (cost int) {
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part2(input string) (cost int) {
+	garden := parseInput(input)
+	slog.Debug("Garden", "garden", garden)
+	clusters := make([]Cluster, 0)
+	for _, row := range garden {
+		for _, flower := range row {
+			if !flower.clustered {
+				cluster := Cluster{}
+				flower.getCluster(garden, &cluster)
+				cluster.calcSides(garden)
+				slog.Debug("Flower is clustered", "flower", flower, "cluster", cluster)
+				clusters = append(clusters, cluster)
+			}
+		}
+	}
+	slog.Debug("Clusters", "clusters", clusters)
+	for i, cluster := range clusters {
+		for j, other := range clusters {
+			if i == j {
+				continue
+			}
+			if cluster.contains(&other) {
+				slog.Debug("Cluster contains another", "cluster", cluster, "other", other)
+				cluster.sides += other.sides
+			}
+		}
+	}
+	slog.Debug("Clusters", "clusters", clusters)
+	// Calculate the total cost. The cost is obtained by multiplying the area with the perimeter
+	for _, cluster := range clusters {
+		slog.Debug("Cluster", "cluster", cluster, "cost", cluster.area*cluster.sides)
+		cost += cluster.area * cluster.sides
+	}
+
+	return
 }
 
 func parseInput(input string) (garden Garden) {

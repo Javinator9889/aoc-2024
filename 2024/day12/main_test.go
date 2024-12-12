@@ -22,6 +22,11 @@ OOOOO
 OXOXO
 OOOOO`
 
+var simple = `AAAA
+BBCD
+BBCC
+EEEC`
+
 func Test_part1(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -60,10 +65,20 @@ func Test_part2(t *testing.T) {
 		input string
 		want  int
 	}{
+		// {
+		// 	name:  "simple example",
+		// 	input: simple,
+		// 	want:  80,
+		// },
+		{
+			name:  "containing example",
+			input: example2,
+			want:  436,
+		},
 		{
 			name:  "example",
 			input: example,
-			want:  0,
+			want:  1206,
 		},
 		// {
 		// 	name:  "actual",
