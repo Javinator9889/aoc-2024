@@ -21,6 +21,10 @@ Button A: X+69, Y+23
 Button B: X+27, Y+71
 Prize: X=18641, Y=10279`
 
+var example2 = `Button A: X+10, Y+10
+Button B: X+20, Y+20
+Prize: X=40, Y=40`
+
 func Test_part1(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -32,11 +36,16 @@ func Test_part1(t *testing.T) {
 			input: example,
 			want:  480,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "example2",
+			input: example2,
+			want:  2,
+		},
+		{
+			name:  "actual",
+			input: input,
+			want:  29438,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
