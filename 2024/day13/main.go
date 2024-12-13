@@ -19,6 +19,7 @@ var buttonRe = regexp.MustCompile(`Button ([A-Z]): X\+(\d+), Y\+(\d+)`)
 var prizeRe = regexp.MustCompile(`Prize: X=(\d+), Y=(\d+)`)
 
 const MAX_PRESSES = 100
+const INF = math.MaxInt
 
 //go:embed input.txt
 var input string
@@ -89,8 +90,8 @@ func Cramer(a *astar.Arcade) (int, int, error) {
 	return int(math.Trunc(x)), int(math.Trunc(y)), nil
 }
 
-func verify(a *astar.Arcade, x, y int) bool {
-	if x < 0 || y < 0 || x > MAX_PRESSES || y > MAX_PRESSES {
+func verify(a *astar.Arcade, x, y, max int) bool {
+	if x < 0 || y < 0 || x > max || y > max {
 		return false
 	}
 	return a.Buttons["A"].Increment.X*x+a.Buttons["B"].Increment.X*y == a.Prize.X &&
@@ -106,7 +107,7 @@ func part1(input string) (cost int) {
 			slog.Warn("error solving system", "arcade", arcade, "error", err)
 			continue
 		}
-		if !verify(arcade, a, b) {
+		if !verify(arcade, a, b, MAX_PRESSES) {
 			slog.Warn("invalid solution", "arcade", arcade, "a", a, "b", b)
 			continue
 		}
@@ -117,8 +118,26 @@ func part1(input string) (cost int) {
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part2(input string) (cost int) {
+	arcades := parseInput(input)
+	for _, arcade := range arcades {
+		arcade.MaxPresses = INF
+		arcade.Prize.X += 10_000_000_000_000
+		arcade.Prize.Y += 10_000_000_000_000
+		a, b, err := Cramer(arcade)
+		if err != nil {
+			slog.Warn("error solving system", "arcade", arcade, "error", err)
+			continue
+		}
+		if !verify(arcade, a, b, INF) {
+			slog.Warn("invalid solution", "arcade", arcade, "a", a, "b", b)
+			continue
+		}
+		slog.Debug("solution", "arcade", arcade, "a", a, "b", b)
+		cost += a*arcade.Buttons["A"].Tokens + b*arcade.Buttons["B"].Tokens
+	}
+
+	return
 }
 
 func parseInput(input string) (arcades []*astar.Arcade) {
