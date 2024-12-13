@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/Javinator9889/aoc-2024/util"
@@ -120,14 +121,17 @@ func fixed(dir []int, f *Flower) int {
 }
 
 // Gets how many sides the cluster has. A side is a number of flowers next to each other
-// in a row or column
+// in a row or column.
+//
+// To calculate the sides, we get the fences we should place at every row/column facing a specific
+// direction. We then sort the fences and calculate the number of sides by checking if the fences
+// are contiguous. If they are not, we increment the number of sides.
 func (c *Cluster) calcSides(garden Garden) {
-	sides := map[string]struct{}{}
 	fences := map[string]map[int][]int{}
 	for _, flower := range c.flowers {
 		for _, dir := range [][]int{UP, DOWN, LEFT, RIGHT} {
 			// We determine the side by where we're coming from
-			sidex, sidey := flower.x * dir[0], flower.y * dir[1]
+			sidex, sidey := flower.x*dir[0], flower.y*dir[1]
 			fence := fmt.Sprintf("%v%v", dir[0], dir[1])
 			if _, ok := fences[fence]; !ok {
 				fences[fence] = make(map[int][]int)
@@ -136,26 +140,42 @@ func (c *Cluster) calcSides(garden Garden) {
 			if _, ok := fences[fence][elem]; !ok {
 				fences[fence][elem] = make([]int, 0)
 			}
-			side := fmt.Sprintf("%v%v", sidex, sidey)
 			if garden.outOfBounds(flower.x+dir[0], flower.y+dir[1]) {
-				side := fmt.Sprintf("%v%v", dir[0], dir[1])
-				slog.Debug("side out of bounds", "side", side, "flower", []int{flower.x, flower.y})
-				sides[side] = struct{}{}
-				v := fixed(dir, flower)
-				fences[fence][elem] = append(fences[fence][elem], v)
+				slog.Debug("side out of bounds", "dir", dir, "flower", []int{flower.x, flower.y})
+				fences[fence][elem] = append(fences[fence][elem], fixed(dir, flower))
 				continue
 			}
 			next := garden[flower.x+dir[0]][flower.y+dir[1]]
 			if next.i != c.i {
-				slog.Debug("item not equals", "i", c.i, "next", next.i, "side", side, "flower", []int{flower.x, flower.y}, "dir", dir, "dst", []int{next.x, next.y})
-				sides[side] = struct{}{}
+				slog.Debug(
+					"item not equals",
+					"i", c.i,
+					"next", next.i,
+					"flower", []int{flower.x, flower.y},
+					"dir", dir,
+					"dst", []int{next.x, next.y},
+				)
 				fences[fence][elem] = append(fences[fence][elem], fixed(dir, flower))
 			}
 		}
 	}
-	slog.Debug("Sides", "sides", sides)
 	slog.Debug("Fences", "fences", fences)
-	c.sides = len(sides)
+	for _, fence := range fences {
+		for _, side := range fence {
+			if len(side) == 0 {
+				continue
+			}
+			slices.Sort(side)
+			slog.Debug("Side", "side", side)
+			prev := -1
+			for _, v := range side {
+				if prev == -1 || v-prev > 1 {
+					c.sides++
+				}
+				prev = v
+			}
+		}
+	}
 }
 
 func (f *Flower) String() string {
