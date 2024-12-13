@@ -65,21 +65,21 @@ func Test_part2(t *testing.T) {
 		input string
 		want  int
 	}{
-		// {
-		// 	name:  "simple example",
-		// 	input: simple,
-		// 	want:  80,
-		// },
+		{
+		 	name:  "simple example",
+		 	input: simple,
+		 	want:  80,
+		},
 		{
 			name:  "containing example",
 			input: example2,
 			want:  436,
 		},
-		{
-			name:  "example",
-			input: example,
-			want:  1206,
-		},
+		//{
+		//	name:  "example",
+		//	input: example,
+		//	want:  1206,
+		//},
 		// {
 		// 	name:  "actual",
 		// 	input: input,

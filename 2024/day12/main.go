@@ -105,26 +105,56 @@ func (c *Cluster) calcPerimeter(garden Garden) {
 	}
 }
 
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
+func fixed(dir []int, f *Flower) int {
+	if dir[0] == 0 {
+		return f.x
+	}
+	return f.y
+}
+
 // Gets how many sides the cluster has. A side is a number of flowers next to each other
 // in a row or column
 func (c *Cluster) calcSides(garden Garden) {
 	sides := map[string]struct{}{}
+	fences := map[string]map[int][]int{}
 	for _, flower := range c.flowers {
 		for _, dir := range [][]int{UP, DOWN, LEFT, RIGHT} {
 			// We determine the side by where we're coming from
-			side := fmt.Sprintf("%v%v%v%v", dir[0], dir[1], flower.x*dir[0], flower.y*dir[1])
+			sidex, sidey := flower.x * dir[0], flower.y * dir[1]
+			fence := fmt.Sprintf("%v%v", dir[0], dir[1])
+			if _, ok := fences[fence]; !ok {
+				fences[fence] = make(map[int][]int)
+			}
+			elem := max(abs(sidex), abs(sidey))
+			if _, ok := fences[fence][elem]; !ok {
+				fences[fence][elem] = make([]int, 0)
+			}
+			side := fmt.Sprintf("%v%v", sidex, sidey)
 			if garden.outOfBounds(flower.x+dir[0], flower.y+dir[1]) {
-				// oobSide := fmt.Sprintf("%v%v", dir[0], dir[1])
+				side := fmt.Sprintf("%v%v", dir[0], dir[1])
+				slog.Debug("side out of bounds", "side", side, "flower", []int{flower.x, flower.y})
 				sides[side] = struct{}{}
+				v := fixed(dir, flower)
+				fences[fence][elem] = append(fences[fence][elem], v)
 				continue
 			}
 			next := garden[flower.x+dir[0]][flower.y+dir[1]]
 			if next.i != c.i {
+				slog.Debug("item not equals", "i", c.i, "next", next.i, "side", side, "flower", []int{flower.x, flower.y}, "dir", dir, "dst", []int{next.x, next.y})
 				sides[side] = struct{}{}
+				fences[fence][elem] = append(fences[fence][elem], fixed(dir, flower))
 			}
 		}
 	}
 	slog.Debug("Sides", "sides", sides)
+	slog.Debug("Fences", "fences", fences)
 	c.sides = len(sides)
 }
 
