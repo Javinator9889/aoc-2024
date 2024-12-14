@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Javinator9889/aoc-2024/cast"
 	"github.com/Javinator9889/aoc-2024/util"
@@ -13,6 +15,9 @@ import (
 
 //go:embed input.txt
 var input string
+
+var re = regexp.MustCompile(`p=(\d+),(\d+) v=(-?\d+),(-?\d+)`)
+var gridSize = Grid{101, 103}
 
 func init() {
 	// do this in init (not main) so test file has same input
@@ -44,20 +49,107 @@ func main() {
 	}
 }
 
-func part1(input string) int {
-	parsed := parseInput(input)
-	_ = parsed
+type Location struct {
+	x, y int
+}
 
-	return 0
+type Velocity Location
+type Grid Location
+type Quadrant struct {
+	topLeft, bottomRight Location
+}
+
+func (g Grid) WrapAround(l Location) Location {
+	inGrid := Location{(l.x + g.x) % g.x, (l.y + g.y) % g.y}
+	if inGrid.x < 0 {
+		inGrid.x += g.x
+	}
+	if inGrid.y < 0 {
+		inGrid.y += g.y
+	}
+	return inGrid
+}
+
+func (g Grid) Quadrants() []Quadrant {
+	return []Quadrant{
+		{
+			topLeft:     Location{0, 0},
+			bottomRight: Location{g.x / 2, g.y / 2},
+		},
+		{
+			topLeft:     Location{g.x / 2, 0},
+			bottomRight: Location{g.x, g.y / 2},
+		},
+		{
+			topLeft:     Location{0, g.y / 2},
+			bottomRight: Location{g.x / 2, g.y},
+		},
+		{
+			topLeft:     Location{g.x / 2, g.y / 2},
+			bottomRight: Location{g.x, g.y},
+		},
+	}
+}
+
+type Robot struct {
+	p Location
+	v Velocity
+}
+
+func (r Robot) Simulate(t time.Duration) Location {
+	return Location{
+		x: r.p.x + r.v.x*int(t.Seconds()),
+		y: r.p.y + r.v.y*int(t.Seconds()),
+	}
+}
+
+func part1(input string) int {
+	robots := parseInput(input)
+	locations := make([]Location, 0)
+	for _, r := range robots {
+		location := r.Simulate(100 * time.Second)
+		locations = append(locations, gridSize.WrapAround(location))
+	}
+
+	safetyFactor := 1
+	for _, quadrant := range gridSize.Quadrants() {
+		count := 0
+		for _, location := range locations {
+			// Skip the location if it's in the middle of the grid
+			if location.x == gridSize.x/2 || location.y == gridSize.y/2 {
+				continue
+			}
+			if location.x >= quadrant.topLeft.x && location.x <= quadrant.bottomRight.x &&
+				location.y >= quadrant.topLeft.y && location.y <= quadrant.bottomRight.y {
+				count++
+			}
+		}
+		safetyFactor *= count
+	}
+
+	return safetyFactor
 }
 
 func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans []int) {
+func parseInput(input string) (robots []Robot) {
 	for _, line := range strings.Split(input, "\n") {
-		ans = append(ans, cast.ToInt(line))
+		matches := re.FindStringSubmatch(line)
+		if matches == nil {
+			panic("invalid input")
+		}
+		robots = append(robots, Robot{
+			p: Location{
+				x: cast.ToInt(matches[1]),
+				y: cast.ToInt(matches[2]),
+			},
+			v: Velocity{
+				x: cast.ToInt(matches[3]),
+				y: cast.ToInt(matches[4]),
+			},
+		})
 	}
-	return ans
+	return
 }
