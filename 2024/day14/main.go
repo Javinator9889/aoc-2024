@@ -130,17 +130,63 @@ func part1(input string) int {
 	return safetyFactor
 }
 
+func (g Grid) Display(robots []*Robot) {
+	// cmd := exec.Command("clear") // Clear the screen
+	// cmd.Stdout = os.Stdout
+	// cmd.Run()
+	for x := 0; x < g.x; x++ {
+		line := make([]int, g.y)
+		for _, r := range robots {
+			if r.p.x == x {
+				line[r.p.y]++
+			}
+		}
+		for _, c := range line {
+			if c == 0 {
+				fmt.Print(" ")
+			} else {
+				fmt.Print(c)
+			}
+		}
+		fmt.Println()
+	}
+}
+
 func part2(input string) int {
+	robots := parseInput(input)
+	origin := make([]Robot, len(robots))
+	for i, r := range robots {
+		origin[i] = *r
+	}
+	i := 0
+	for {
+		for _, r := range robots {
+			r.p = gridSize.WrapAround(r.Simulate(time.Second))
+		}
+		gridSize.Display(robots)
+		i++
+		fmt.Printf("Iteration %d\n\n\n", i)
+		// Check if all robots are in the same position
+		for j, r := range robots {
+			if r.p != origin[j].p {
+				break
+			}
+			if j == len(robots)-1 {
+				slog.Info("Robots have looped back to their original positions")
+				return i
+			}
+		}
+	}
 	return 0
 }
 
-func parseInput(input string) (robots []Robot) {
+func parseInput(input string) (robots []*Robot) {
 	for _, line := range strings.Split(input, "\n") {
 		matches := re.FindStringSubmatch(line)
 		if matches == nil {
 			panic("invalid input")
 		}
-		robots = append(robots, Robot{
+		robots = append(robots, &Robot{
 			p: Location{
 				x: cast.ToInt(matches[1]),
 				y: cast.ToInt(matches[2]),
