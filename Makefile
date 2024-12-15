@@ -15,27 +15,27 @@ check-aoc-cookie:  ## ensures $AOC_SESSION_COOKIE env var is set
 	@ test $${AOC_SESSION_COOKIE?env var not set}
 
 skeleton: ## make skeleton main(_test).go files, optional: $DAY and $YEAR
-	@ if [ -n $$DAY ] && [ -n $$YEAR ]; then \
+	@ if [ -n "$$DAY" ] && [ -n "$$YEAR" ]; then \
 		go run scripts/cmd/skeleton/main.go -day $(DAY) -year $(YEAR) ; \
-	elif [ -n $$DAY ]; then \
+	elif [ -n "$$DAY" ]; then \
 		go run scripts/cmd/skeleton/main.go -day $(DAY); \
 	else \
 		go run scripts/cmd/skeleton/main.go; \
 	fi
 
 input: check-aoc-cookie ## get input, requires $AOC_SESSION_COOKIE, optional: $DAY and $YEAR
-	@ if [ -n $$DAY ] && [ -n $$YEAR ]; then \
+	@ if [ -n "$$DAY" ] && [ -n "$$YEAR" ]; then \
 		go run scripts/cmd/input/main.go -day $(DAY) -year $(YEAR) -cookie $(AOC_SESSION_COOKIE); \
-	elif [ -n $$DAY ]; then \
+	elif [ -n "$$DAY" ]; then \
 		go run scripts/cmd/input/main.go -day $(DAY) -cookie $(AOC_SESSION_COOKIE); \
 	else \
 		go run scripts/cmd/input/main.go -cookie $(AOC_SESSION_COOKIE); \
 	fi
 
 prompt: check-aoc-cookie ## get prompt, requires $AOC_SESSION_COOKIE, optional: $DAY and $YEAR
-	@ if [ -n $$DAY ] && [ -n $$YEAR ]; then \
+	@ if [ -n "$$DAY" ] && [ -n "$$YEAR" ]; then \
 		go run scripts/cmd/prompt/main.go -day $(DAY) -year $(YEAR) -cookie $(AOC_SESSION_COOKIE); \
-	elif [ -n $$DAY ]; then \
+	elif [ -n "$$DAY" ]; then \
 		go run scripts/cmd/prompt/main.go -day $(DAY) -cookie $(AOC_SESSION_COOKIE); \
 	else \
 		go run scripts/cmd/prompt/main.go -cookie $(AOC_SESSION_COOKIE); \
@@ -44,7 +44,7 @@ prompt: check-aoc-cookie ## get prompt, requires $AOC_SESSION_COOKIE, optional: 
 all: skeleton input prompt ## run skeleton, input and prompt, optional: $DAY and $YEAR
 
 run-%: ## run day $*, optional: $YEAR
-	@ if [ -n $$YEAR ]; then \
+	@ if [ -n "$$YEAR" ]; then \
 		go run $(YEAR)/day$*/main.go -part 1; \
 		go run $(YEAR)/day$*/main.go -part 2; \
 	else \
@@ -53,7 +53,7 @@ run-%: ## run day $*, optional: $YEAR
 	fi
 
 check-%: ## run day $*, optional: $YEAR
-	@ if [ -n $$YEAR ]; then \
+	@ if [ -n "$$YEAR" ]; then \
 		go test $(MODULE)/$(YEAR)/day$*; \
 	else \
 		go test $(MODULE)/$(TY)/day$*; \
