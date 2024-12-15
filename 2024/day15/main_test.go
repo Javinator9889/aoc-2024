@@ -38,6 +38,16 @@ var example2 = `########
 
 <^^>>>vv<v>>v<<`
 
+var example3 = `#######
+#...#.#
+#.....#
+#..OO@#
+#..O..#
+#.....#
+#######
+
+<vv<<^^<<^^`
+
 func Test_part1(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -79,13 +89,18 @@ func Test_part2(t *testing.T) {
 		{
 			name:  "example",
 			input: example,
-			want:  0,
+			want:  9021,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "short example",
+			input: example3,
+			want:  618,
+		},
+		{
+			name:  "actual",
+			input: input,
+			want:  1528453,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {

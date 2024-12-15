@@ -14,14 +14,16 @@ import (
 var input string
 
 const (
-	EMPTY  = "."
-	WALL   = "#"
-	OBJECT = "O"
-	ROBOT  = "@"
-	UP     = "^"
-	DOWN   = "v"
-	LEFT   = "<"
-	RIGHT  = ">"
+	EMPTY     = "."
+	WALL      = "#"
+	OBJECT    = "O"
+	ROBOT     = "@"
+	BOX_SIDE1 = "["
+	BOX_SIDE2 = "]"
+	UP        = "^"
+	DOWN      = "v"
+	LEFT      = "<"
+	RIGHT     = ">"
 )
 
 func init() {
@@ -64,6 +66,7 @@ func (c Coordinates) Add(other Coordinates) Coordinates {
 
 type Element interface {
 	Move(dir Coordinates, grid Grid) bool
+	WouldMove(dir Coordinates, grid Grid) bool
 	Position() Coordinates
 	String() string
 }
@@ -73,6 +76,10 @@ type Wall struct {
 }
 
 func (w *Wall) Move(dir Coordinates, grid Grid) bool {
+	return false
+}
+
+func (w *Wall) WouldMove(dir Coordinates, grid Grid) bool {
 	return false
 }
 
@@ -86,6 +93,17 @@ func (w *Wall) String() string {
 
 type Object struct {
 	pos Coordinates
+}
+
+func (o *Object) WouldMove(dir Coordinates, grid Grid) bool {
+	dst := Coordinates{o.pos.x + dir.x, o.pos.y + dir.y}
+	if dst.x < 0 || dst.y < 0 || dst.x >= len(grid) || dst.y >= len(grid[0]) {
+		return false
+	}
+	if grid[dst.x][dst.y] == nil {
+		return true
+	}
+	return grid[dst.x][dst.y].WouldMove(dir, grid)
 }
 
 func (o *Object) Move(dir Coordinates, grid Grid) bool {
@@ -131,12 +149,67 @@ func (r *Robot) Move(dir Coordinates, grid Grid) bool {
 	return moved
 }
 
+func (r *Robot) WouldMove(dir Coordinates, grid Grid) bool {
+	return (*Object)(r).WouldMove(dir, grid)
+}
+
 func (r *Robot) Position() Coordinates {
 	return r.pos
 }
 
 func (r *Robot) String() string {
 	return ROBOT
+}
+
+type Box struct {
+	o    Object
+	side string
+	next *Box
+}
+
+func (b *Box) moveObject(dir Coordinates, grid Grid) bool {
+	ret := b.o.Move(dir, grid)
+	if ret {
+		grid[b.o.Position().x][b.o.Position().y] = b
+	}
+	return ret
+}
+
+func (b *Box) Move(dir Coordinates, grid Grid) bool {
+	// Check if the other side is in the same direction as the one we're moving
+	dst := b.o.Position().Add(dir)
+	if dst == b.next.o.Position() {
+		moved := b.next.moveObject(dir, grid)
+		if moved {
+			b.moveObject(dir, grid)
+			return true
+		}
+		return false
+	}
+	// If the other side is not in the same direction, we should verify first if we can move
+	if !b.WouldMove(dir, grid) {
+		return false
+	}
+	// If we can move, we should move the other side first
+	b.next.moveObject(dir, grid)
+	b.moveObject(dir, grid)
+	return true
+}
+
+func (b *Box) WouldMove(dir Coordinates, grid Grid) bool {
+	dst := b.o.Position().Add(dir)
+	if dst == b.next.o.Position() {
+		return b.next.o.WouldMove(dir, grid)
+	}
+	return b.o.WouldMove(dir, grid) && b.next.o.WouldMove(dir, grid)
+}
+
+func (b *Box) Position() Coordinates {
+	return b.o.Position()
+}
+
+func (b *Box) String() string {
+	return b.side
 }
 
 type Grid [][]Element
@@ -190,8 +263,39 @@ func part1(input string) (coordinates int) {
 	return
 }
 
-func part2(input string) int {
-	return 0
+func part2(input string) (coordinates int) {
+	grid, robot, moves := parseInput2(input)
+	slog.Debug("Parsed Grid", "grid", grid, "robot", robot, "moves", moves)
+	fmt.Println(grid)
+
+	for _, move := range moves {
+		dst := robot.Add(move)
+		rbt := grid[robot.x][robot.y]
+		moved := rbt.Move(move, grid)
+		slog.Debug(
+			"Robot attempted to move",
+			"origin", robot,
+			"dst", dst,
+			"moved", moved,
+		)
+		if moved {
+			fmt.Println(grid)
+			robot = dst
+		}
+	}
+	slog.Debug("Final Grid", "grid", grid)
+	fmt.Println(grid)
+	for _, row := range grid {
+		for _, elem := range row {
+			if elem == nil || elem.String() != BOX_SIDE1 {
+				continue
+			}
+			pos := elem.Position()
+			coordinates += (pos.x * 100) + pos.y
+		}
+	}
+
+	return
 }
 
 func parseInput(input string) (grid Grid, robot Coordinates, moves []Coordinates) {
@@ -221,6 +325,45 @@ func parseInput(input string) (grid Grid, robot Coordinates, moves []Coordinates
 			}
 		}
 		if len(row) > 0 {
+			grid = append(grid, row)
+		}
+	}
+	return
+}
+
+func parseInput2(input string) (grid Grid, robot Coordinates, moves []Coordinates) {
+	for x, line := range strings.Split(input, "\n") {
+		row := make([]Element, 0)
+		for y, char := range line {
+			// Everything is duplicated, so we need to multiply by 2
+			realY := y * 2
+			switch string(char) {
+			case EMPTY:
+				row = append(row, nil, nil)
+			case WALL:
+				row = append(row, &Wall{Coordinates{x, realY}}, &Wall{Coordinates{x, realY + 1}})
+			case OBJECT:
+				side1 := &Box{Object{Coordinates{x, realY}}, BOX_SIDE1, nil}
+				side2 := &Box{Object{Coordinates{x, realY + 1}}, BOX_SIDE2, side1}
+				side1.next = side2
+				row = append(row, side1, side2)
+			case ROBOT:
+				robot = Coordinates{x, realY}
+				row = append(row, &Robot{robot}, nil)
+			case UP:
+				moves = append(moves, Coordinates{-1, 0})
+			case DOWN:
+				moves = append(moves, Coordinates{1, 0})
+			case LEFT:
+				moves = append(moves, Coordinates{0, -1})
+			case RIGHT:
+				moves = append(moves, Coordinates{0, 1})
+			default:
+				slog.Warn("Ignoring unknown character", "char", char)
+			}
+		}
+		if len(row) > 0 {
+			slog.Debug("Row", "row", row)
 			grid = append(grid, row)
 		}
 	}
