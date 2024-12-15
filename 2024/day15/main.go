@@ -7,12 +7,22 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/Javinator9889/aoc-2024/cast"
 	"github.com/Javinator9889/aoc-2024/util"
 )
 
 //go:embed input.txt
 var input string
+
+const (
+	EMPTY  = "."
+	WALL   = "#"
+	OBJECT = "O"
+	ROBOT  = "@"
+	UP     = "^"
+	DOWN   = "v"
+	LEFT   = "<"
+	RIGHT  = ">"
+)
 
 func init() {
 	// do this in init (not main) so test file has same input
@@ -44,20 +54,175 @@ func main() {
 	}
 }
 
-func part1(input string) int {
-	parsed := parseInput(input)
-	_ = parsed
+type Coordinates struct {
+	x, y int
+}
 
-	return 0
+func (c Coordinates) Add(other Coordinates) Coordinates {
+	return Coordinates{c.x + other.x, c.y + other.y}
+}
+
+type Element interface {
+	Move(dir Coordinates, grid Grid) bool
+	Position() Coordinates
+	String() string
+}
+
+type Wall struct {
+	pos Coordinates
+}
+
+func (w *Wall) Move(dir Coordinates, grid Grid) bool {
+	return false
+}
+
+func (w *Wall) Position() Coordinates {
+	return w.pos
+}
+
+func (w *Wall) String() string {
+	return WALL
+}
+
+type Object struct {
+	pos Coordinates
+}
+
+func (o *Object) Move(dir Coordinates, grid Grid) bool {
+	dst := Coordinates{o.pos.x + dir.x, o.pos.y + dir.y}
+	if dst.x < 0 || dst.y < 0 || dst.x >= len(grid) || dst.y >= len(grid[0]) {
+		return false
+	}
+	// If there is free space, just move
+	if grid[dst.x][dst.y] == nil {
+		grid[dst.x][dst.y] = o
+		grid[o.pos.x][o.pos.y] = nil
+		o.pos = dst
+		return true
+	}
+	// Otherwise, we should try to push any object in the way
+	if !grid[dst.x][dst.y].Move(dir, grid) {
+		return false
+	}
+	// If we could move the object, we can move
+	grid[dst.x][dst.y] = o
+	grid[o.pos.x][o.pos.y] = nil
+	o.pos = dst
+	return true
+}
+
+func (o *Object) Position() Coordinates {
+	return o.pos
+}
+
+func (o *Object) String() string {
+	return OBJECT
+}
+
+// Robot is an Object that can move on its own
+type Robot Object
+
+func (r *Robot) Move(dir Coordinates, grid Grid) bool {
+	moved := (*Object)(r).Move(dir, grid)
+	if moved {
+		// Cast to Robot to avoid infinite recursion
+		grid[r.pos.x][r.pos.y] = (*Robot)(r)
+	}
+	return moved
+}
+
+func (r *Robot) Position() Coordinates {
+	return r.pos
+}
+
+func (r *Robot) String() string {
+	return ROBOT
+}
+
+type Grid [][]Element
+
+func (g Grid) String() string {
+	var sb strings.Builder
+	for _, row := range g {
+		for _, elem := range row {
+			if elem == nil {
+				sb.WriteString(EMPTY)
+			} else {
+				sb.WriteString(elem.String())
+			}
+		}
+		sb.WriteRune('\n')
+	}
+	return sb.String()
+}
+
+func part1(input string) (coordinates int) {
+	grid, robot, moves := parseInput(input)
+	slog.Debug("Parsed Grid", "grid", grid, "robot", robot, "moves", moves)
+	fmt.Println(grid)
+
+	for _, move := range moves {
+		dst := robot.Add(move)
+		rbt := grid[robot.x][robot.y]
+		moved := rbt.Move(move, grid)
+		slog.Debug(
+			"Robot attempted to move",
+			"origin", robot,
+			"dst", dst,
+			"moved", moved,
+		)
+		if moved {
+			robot = dst
+		}
+	}
+	slog.Debug("Final Grid", "grid", grid)
+	fmt.Println(grid)
+	for _, row := range grid {
+		for _, elem := range row {
+			if elem == nil || elem.String() != OBJECT {
+				continue
+			}
+			pos := elem.Position()
+			coordinates += (pos.x * 100) + pos.y
+		}
+	}
+
+	return
 }
 
 func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans []int) {
-	for _, line := range strings.Split(input, "\n") {
-		ans = append(ans, cast.ToInt(line))
+func parseInput(input string) (grid Grid, robot Coordinates, moves []Coordinates) {
+	for x, line := range strings.Split(input, "\n") {
+		row := make([]Element, 0)
+		for y, char := range line {
+			switch string(char) {
+			case EMPTY:
+				row = append(row, nil)
+			case WALL:
+				row = append(row, &Wall{Coordinates{x, y}})
+			case OBJECT:
+				row = append(row, &Object{Coordinates{x, y}})
+			case ROBOT:
+				robot = Coordinates{x, y}
+				row = append(row, &Robot{robot})
+			case UP:
+				moves = append(moves, Coordinates{-1, 0})
+			case DOWN:
+				moves = append(moves, Coordinates{1, 0})
+			case LEFT:
+				moves = append(moves, Coordinates{0, -1})
+			case RIGHT:
+				moves = append(moves, Coordinates{0, 1})
+			default:
+				slog.Warn("Ignoring unknown character", "char", char)
+			}
+		}
+		if len(row) > 0 {
+			grid = append(grid, row)
+		}
 	}
-	return ans
+	return
 }

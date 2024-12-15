@@ -5,8 +5,7 @@ import (
 	"testing"
 )
 
-var example = `
-##########
+var example = `##########
 #..O..O.O#
 #......O.#
 #.OO..O.O#
@@ -55,11 +54,11 @@ func Test_part1(t *testing.T) {
 			input: example2,
 			want:  2028,
 		},
-		// {
-		// 	name:  "actual",
-		// 	input: input,
-		// 	want:  0,
-		// },
+		{
+			name:  "actual",
+			input: input,
+			want:  1514333,
+		},
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	for _, tt := range tests {
