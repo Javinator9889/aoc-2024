@@ -5,13 +5,18 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/Javinator9889/aoc-2024/util"
 )
 
 //go:embed input.txt
 var input string
+var visualization bool
+var delay time.Duration
 
 const (
 	EMPTY     = "."
@@ -39,6 +44,8 @@ func main() {
 	var debug bool
 	flag.IntVar(&part, "part", 1, "part 1 or 2")
 	flag.BoolVar(&debug, "debug", false, "debug mode")
+	flag.BoolVar(&visualization, "visualization", false, "visualization mode")
+	flag.DurationVar(&delay, "delay", 100*time.Millisecond, "delay between moves (only in visualization mode)")
 	flag.Parse()
 	fmt.Println("Running part", part)
 	if debug {
@@ -219,7 +226,7 @@ func (g Grid) String() string {
 	for _, row := range g {
 		for _, elem := range row {
 			if elem == nil {
-				sb.WriteString(EMPTY)
+				sb.WriteString(" ")
 			} else {
 				sb.WriteString(elem.String())
 			}
@@ -229,10 +236,36 @@ func (g Grid) String() string {
 	return sb.String()
 }
 
+func (g Grid) View() {
+	if !visualization {
+		return
+	}
+	// Go to the top of the terminal
+	fmt.Printf("\033[0;0H")
+
+	// Print the grid itself
+	fmt.Println(g)
+}
+
+func visualizationDelay() {
+	if visualization {
+		time.Sleep(delay)
+	}
+}
+
+func clear() {
+	if visualization {
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
+
 func part1(input string) (coordinates int) {
 	grid, robot, moves := parseInput(input)
 	slog.Debug("Parsed Grid", "grid", grid, "robot", robot, "moves", moves)
-	fmt.Println(grid)
+	clear()
+	grid.View()
 
 	for _, move := range moves {
 		dst := robot.Add(move)
@@ -245,11 +278,13 @@ func part1(input string) (coordinates int) {
 			"moved", moved,
 		)
 		if moved {
+			grid.View()
+			visualizationDelay()
 			robot = dst
 		}
 	}
 	slog.Debug("Final Grid", "grid", grid)
-	fmt.Println(grid)
+	grid.View()
 	for _, row := range grid {
 		for _, elem := range row {
 			if elem == nil || elem.String() != OBJECT {
@@ -266,7 +301,8 @@ func part1(input string) (coordinates int) {
 func part2(input string) (coordinates int) {
 	grid, robot, moves := parseInput2(input)
 	slog.Debug("Parsed Grid", "grid", grid, "robot", robot, "moves", moves)
-	fmt.Println(grid)
+	clear()
+	grid.View()
 
 	for _, move := range moves {
 		dst := robot.Add(move)
@@ -279,12 +315,13 @@ func part2(input string) (coordinates int) {
 			"moved", moved,
 		)
 		if moved {
-			fmt.Println(grid)
+			grid.View()
+			visualizationDelay()
 			robot = dst
 		}
 	}
 	slog.Debug("Final Grid", "grid", grid)
-	fmt.Println(grid)
+	grid.View()
 	for _, row := range grid {
 		for _, elem := range row {
 			if elem == nil || elem.String() != BOX_SIDE1 {
