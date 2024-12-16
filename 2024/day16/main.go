@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/Javinator9889/aoc-2024/cast"
+	"github.com/Javinator9889/aoc-2024/2024/day16/astar"
 	"github.com/Javinator9889/aoc-2024/util"
 )
 
@@ -44,20 +44,40 @@ func main() {
 	}
 }
 
-func part1(input string) int {
-	parsed := parseInput(input)
-	_ = parsed
+func part1(input string) (cost int) {
+	reindlympics := parseInput(input)
+	slog.Debug("parsed", "reindlympics", reindlympics)
+	path := reindlympics.AStar()
+	if path == nil {
+		slog.Debug("no path found")
+		return -1
+	}
+	slog.Debug("found path", "path", path)
 
-	return 0
+	return path.Cost()
 }
 
 func part2(input string) int {
 	return 0
 }
 
-func parseInput(input string) (ans []int) {
-	for _, line := range strings.Split(input, "\n") {
-		ans = append(ans, cast.ToInt(line))
+func parseInput(input string) *astar.Reindlympics {
+	res := &astar.Reindlympics{Grid: make(astar.Grid, 0)}
+	for i, line := range strings.Split(input, "\n") {
+		res.Grid = append(res.Grid, make([]rune, 0))
+		for j, char := range line {
+			res.Grid[i] = append(res.Grid[i], char)
+			switch char {
+			case 'S':
+				res.Start = astar.Location{X: i, Y: j}
+			case 'E':
+				res.End = astar.Location{X: i, Y: j}
+			case '#':
+			case '.':
+			default:
+				panic("invalid character")
+			}
+		}
 	}
-	return ans
+	return res
 }
