@@ -58,7 +58,23 @@ func part1(input string) (cost int) {
 }
 
 func part2(input string) int {
-	return 0
+	reindlympics := parseInput(input)
+	slog.Debug("parsed", "reindlympics", reindlympics)
+	optimalPath := reindlympics.AStar()
+	if optimalPath == nil {
+		slog.Debug("no path found")
+		return -1
+	}
+	path := reindlympics.AStarRecursive(len(optimalPath), 0, astar.EAST)
+	if path == nil {
+		slog.Debug("no paths found")
+		return -1
+	}
+	slog.Debug("found path", "paths", path)
+	uniq := path.Uniq()
+	slog.Debug("found unique paths", "paths", uniq)
+
+	return len(uniq)
 }
 
 func parseInput(input string) *astar.Reindlympics {
