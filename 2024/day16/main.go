@@ -65,7 +65,7 @@ func part2(input string) int {
 		slog.Debug("no path found")
 		return -1
 	}
-	path := reindlympics.AStarRecursive(len(optimalPath), 0, astar.EAST)
+	path := reindlympics.AStarRecursive(len(optimalPath), astar.EAST, astar.Path{})
 	if path == nil {
 		slog.Debug("no paths found")
 		return -1

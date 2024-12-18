@@ -81,6 +81,21 @@ func (p Path) Uniq() Path {
 	return res
 }
 
+func (p Path) Copy() Path {
+	res := make(Path, len(p))
+	copy(res, p)
+	return res
+}
+
+func (p Path) Contains(f PathFinder) bool {
+	for _, node := range p {
+		if node.finder.pos == f.pos && node.finder.dir == f.dir {
+			return true
+		}
+	}
+	return false
+}
+
 type nodeMap map[PathFinder]*Node
 
 func (nm nodeMap) Get(p PathFinder) *Node {
@@ -149,7 +164,7 @@ func (r *Reindlympics) AStar() Path {
 	return nil
 }
 
-func (r *Reindlympics) AStarRecursive(target int, actual int, initialDir Location) Path {
+func (r *Reindlympics) AStarRecursive(target int, initialDir Location, actual Path) Path {
 	nm := nodeMap{}
 	nq := &PriorityQueue{}
 	heap.Init(nq)
@@ -160,6 +175,7 @@ func (r *Reindlympics) AStarRecursive(target int, actual int, initialDir Locatio
 	fromNode.cost = 0
 	fromNode.prev = nil
 	heap.Push(nq, fromNode)
+	cycle := false
 	var this Path
 
 	for {
@@ -172,36 +188,39 @@ func (r *Reindlympics) AStarRecursive(target int, actual int, initialDir Locatio
 		current.closed = true
 
 		if current.finder.pos == r.End {
-			var tmp Path
-			count := 0
 			for current != nil {
-				tmp = append(Path{current}, tmp...)
+				actual = append(Path{current}, actual...)
 				current = current.prev
-				count++
 			}
-			if count < target {
-				this = append(this, tmp...)
+			if len(actual) == target {
+				this = append(this, actual...)
 				return this
 			}
 		}
 		if current.finder.pos == r.Start {
-			return nil
+			if cycle {
+				return nil
+			}
+			cycle = true
 		}
 
 		// Get the neighbors of the current node
 		for _, neighbor := range current.finder.Neighbors(r) {
-
+			// Check if we have already visited this node
+			if actual.Contains(neighbor) {
+				continue
+			}
 			if current.finder.dir != neighbor.dir {
 				cTmp := current
-				count := 0
+				newPath := actual.Copy()
 				for cTmp != nil {
-					count++
+					newPath = append(Path{cTmp}, newPath...)
 					cTmp = cTmp.prev
 				}
 				rTmp := *r
 				rTmp.Start = neighbor.pos
 
-				res := rTmp.AStarRecursive(target, count, neighbor.dir)
+				res := rTmp.AStarRecursive(target, neighbor.dir, newPath)
 				if res != nil {
 					this = append(this, res...)
 				}
